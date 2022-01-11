@@ -1,0 +1,129 @@
+
+CREATE TABLE l6_Positions (position VARCHAR2(20), rate NUMBER);
+CREATE TABLE l6_Buildings(bcode VARCHAR2(20), bname VARCHAR2(20)); 
+
+INSERT INTO l6_Positions
+SELECT DISTINCT  position,rate
+FROM labdata.lab6_payrolls;
+
+INSERT INTO l6_Buildings
+SELECT DISTINCT  bcode,bname
+FROM labdata.lab6_payrolls;
+
+ALTER TABLE l6_Positions 
+ADD CONSTRAINT LAB6_IC_Position_PK
+UNIQUE (position)
+
+ALTER TABLE l6_Buildings 
+ADD CONSTRAINT LAB6_IC_bcode_PK
+UNIQUE (bcode)
+
+CREATE TABLE l6_Employees (empID number, eName VARCHAR2(20), dept VARCHAR2(20),position VARCHAR2(20), phone NUMBER); 
+ALTER TABLE l6_Employees 
+ADD CONSTRAINT LAB6_IC_empID_PK
+UNIQUE (empID)
+
+CREATE TABLE l6_Departments (dept VARCHAR2(20), 
+mgrid NUMBER, bcode VARCHAR2(20), room number);
+
+ALTER TABLE l6_Departments 
+ADD CONSTRAINT LAB6_IC_dept_PK
+UNIQUE (dept)
+
+CREATE TABLE l6_Payroll(empid  number, paydate DATE, hrs NUMBER)
+
+ALTER TABLE l6_Payroll 
+ADD CONSTRAINT LAB6_IC_empid_paydate_PK
+UNIQUE (empid,paydate)
+
+
+ALTER TABLE l6_Employees 
+ADD CONSTRAINT LAB6_IC_dept_FK1
+FOREIGN KEY (dept) 
+REFERENCES l6_Departments (dept) 
+
+ALTER TABLE l6_Employees 
+ADD CONSTRAINT LAB6_IC_position_FK2
+FOREIGN KEY (position) 
+REFERENCES l6_Positions (position) 
+
+
+ALTER TABLE l6_Departments 
+ADD CONSTRAINT LAB6_IC_mgrid_FK1
+FOREIGN KEY (mgrid) 
+REFERENCES l6_Employees (empID) 
+
+ALTER TABLE l6_Departments 
+ADD CONSTRAINT LAB6_IC_bcode_FK1
+FOREIGN KEY (bcode) 
+REFERENCES l6_Buildings (bcode) 
+
+ALTER TABLE l6_Payroll 
+ADD CONSTRAINT LAB6_IC_empid_FK1
+FOREIGN KEY (empid) 
+REFERENCES l6_Employees (empID) 
+
+
+INSERT INTO l6_Employees
+SELECT DISTINCT emp_ID, name, dept,position,phone
+FROM 
+labdata.lab6_payrolls
+ORDER BY emp_ID
+
+
+Alter table l6_Employees
+modify phone varchar2(5);
+
+INSERT INTO l6_Departments
+SELECT DISTINCT dept, mgr_id, bcode,room
+FROM 
+labdata.lab6_payrolls
+ORDER BY dept
+
+
+ALTER TABLE l6_Departments
+DROP CONSTRAINT lab6_ic_mgrid_fk1;
+
+
+INSERT INTO l6_Payroll
+SELECT DISTINCT emp_ID,  paydate, hours
+FROM labdata.lab6_payrolls
+ORDER BY paydate
+
+CREATE VIEW LAB6_PAYDAYS AS
+SELECT e.empid EMP_ID,e.ename NAME, po.position POSITION, po.rate RATE,
+       e.phone PHONE,d.dept DEPT, d.mgrid MGR_ID,e2.eName MGR_NAME,
+       d.room ROOM,b.bcode BCODE,b.bname BNAME, p.hrs HOURS,p.paydate PAYDATE, 
+       TO_CHAR((rate*hrs + (rate/2)*Decode(FLOOR(hrs/80),0,0,(hrs-80))),'$999999.99') PAY	   
+FROM l6_Employees e, l6_Buildings b, l6_Departments d,
+     l6_Payroll p, l6_Positions po, l6_Employees e2
+WHERE e.empID = p.empID AND
+      e.dept = d.dept AND
+      e.position = po.position AND
+      d.bcode = b.bcode AND
+      e2.empID = d.mgrid
+ORDER BY p.paydate,e.empID	  
+
+
+SELECT e.empid,e.ename, p.paydate, po.rate, e.phone,d.dept, d.mgrid,
+       p.hrs,p.paydate, TO_CHAR((rate*hrs + (rate/2)*Decode(FLOOR(hrs/80),0,0,(hrs-80))),'$999,999.99')  pay  
+FROM l6_Employees e, l6_Buildings b, l6_Departments d,
+     l6_Payroll p, l6_Positions po
+WHERE e.empID = p.empID AND
+      e.dept = d.dept AND
+	  e.position = po.position AND
+	  d.bcode = b.bcode
+ORDER BY p.paydate,e.empID
+
+TO_CHAR((rate*hrs + (rate/2)*Decode(FLOOR(hrs/80),0,0,(hrs-80))),'$999,999.99')
+
+
+SELECT   e.empid  EMPID,e.ename, e2.ename mgrname, p.paydate
+FROM l6_Employees e, l6_Employees e2, l6_Departments d,l6_Payroll p
+WHERE e.dept = d.dept AND
+      e2.empID = d.mgrid AND 
+	  p.empID = e.empID
+ORDER BY p.paydate,e.empID
+
+
+
